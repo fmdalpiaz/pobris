@@ -1,0 +1,126 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        String   @id @default(cuid())
+    email     String   @unique
+    password  String
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    accounts     Account[]
+    transactions Transaction[]
+    categories   Category[]
+    goals        Goal[]
+
+    @@map("users")
+}
+
+model Account {
+    id          String      @id @default(cuid())
+    name        String
+    type        AccountType
+    balance     Decimal     @db.Decimal(15, 2)
+    isActive    Boolean     @default(true)
+    createdAt   DateTime    @default(now())
+    updatedAt   DateTime    @updatedAt
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    transactionsFrom Transaction[] @relation("TransactionFromAccount")
+    transactionsTo   Transaction[] @relation("TransactionToAccount")
+
+    @@map("accounts")
+}
+
+model Category {
+    id          String   @id @default(cuid())
+    name        String
+    color       String?
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    transactionItems TransactionItem[]
+
+    @@map("categories")
+}
+
+model Transaction {
+    id          String          @id @default(cuid())
+    description String
+    amount      Decimal         @db.Decimal(15, 2)
+    type        TransactionType
+    date        DateTime
+    createdAt   DateTime        @default(now())
+    updatedAt   DateTime        @updatedAt
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    fromAccountId String?
+    fromAccount   Account? @relation("TransactionFromAccount", fields: [fromAccountId], references: [id])
+
+    toAccountId String?
+    toAccount   Account? @relation("TransactionToAccount", fields: [toAccountId], references: [id])
+
+    items TransactionItem[]
+
+    @@map("transactions")
+}
+
+model TransactionItem {
+    id          String  @id @default(cuid())
+    description String?
+    amount      Decimal @db.Decimal(15, 2)
+
+    transactionId String
+    transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+    categoryId String
+    category   Category @relation(fields: [categoryId], references: [id])
+
+    @@map("transaction_items")
+}
+
+model Goal {
+    id          String   @id @default(cuid())
+    name        String
+    description String?
+    targetAmount Decimal @db.Decimal(15, 2)
+    currentAmount Decimal @db.Decimal(15, 2) @default(0)
+    targetDate  DateTime?
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("goals")
+}
+
+enum AccountType {
+    CHECKING
+    SAVINGS
+    CREDIT_CARD
+    INVESTMENT
+    CASH
+}
+
+enum TransactionType {
+    INCOME
+    EXPENSE
+    TRANSFER
+}
